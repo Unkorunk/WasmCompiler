@@ -1,3 +1,4 @@
+import tree.AssignNode
 import tree.ConsoleNode
 import tree.FinalNode
 import tree.LetNode
@@ -60,11 +61,11 @@ fun main(args: Array<String>) {
     val letNodeA = LetNode(ConstExprNode(123), null)
     val letNodeB = LetNode(ConstExprNode(256), null)
     letNodeA.nextNode = letNodeB
-    val letNodeC = LetNode(AddExprNode(VarExprNode(letNodeA), VarExprNode(letNodeB)), null)
-    letNodeB.nextNode = letNodeC
+    val assignNode = AssignNode(letNodeA, AddExprNode(VarExprNode(letNodeA), VarExprNode(letNodeB)), null)
+    letNodeB.nextNode = assignNode
 
-    val consoleNode = ConsoleNode(letNodeC, null)
-    letNodeC.nextNode = consoleNode
+    val consoleNode = ConsoleNode(letNodeA, null)
+    assignNode.nextNode = consoleNode
 
     val finalNode = FinalNode()
     consoleNode.nextNode = finalNode
