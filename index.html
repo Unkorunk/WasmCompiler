@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Page</title>
+</head>
+<body>
+
+    <script>
+    var importObject = {
+      imports: { imported_func: arg => console.log(arg) }
+    };
+
+    fetch('source.wasm').then(response =>
+      response.arrayBuffer()
+    ).then(bytes =>
+      WebAssembly.instantiate(bytes, importObject)
+    ).then(results => {
+      results.instance.exports.exported_func();
+    });
+    </script>
+
+</body>
+</html>
