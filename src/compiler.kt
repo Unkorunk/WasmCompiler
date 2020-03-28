@@ -1,7 +1,4 @@
-import tree.AssignNode
-import tree.ConsoleNode
-import tree.FinalNode
-import tree.LetNode
+import tree.*
 import tree.expr.OperationExprNode
 import tree.expr.ConstExprNode
 import tree.expr.Operation
@@ -59,17 +56,26 @@ fun main(args: Array<String>) {
 
     // TODO: analyze source text
 
-    val letNodeA = LetNode(ConstExprNode(123), null)
-    val letNodeB = LetNode(ConstExprNode(256), null)
+    val letNodeA = LetNode(ConstExprNode(1), null)
+    val letNodeB = LetNode(ConstExprNode(1), null)
     letNodeA.nextNode = letNodeB
-    val assignNode = AssignNode(letNodeA, OperationExprNode(VarExprNode(letNodeA), VarExprNode(letNodeB), Operation.Less), null)
-    letNodeB.nextNode = assignNode
+    val letNodeIdx = LetNode(ConstExprNode(0), null);
+    letNodeB.nextNode = letNodeIdx
 
+    val assignNode1 = AssignNode(letNodeA, OperationExprNode(VarExprNode(letNodeA), VarExprNode(letNodeB), Operation.Add), null)
+    val assignNode2 = AssignNode(letNodeB, OperationExprNode(VarExprNode(letNodeA), VarExprNode(letNodeB), Operation.Sub), null)
+    assignNode1.nextNode = assignNode2
+    val assignNode3 = AssignNode(letNodeIdx, OperationExprNode(VarExprNode(letNodeIdx), ConstExprNode(1), Operation.Add), null)
+    assignNode2.nextNode = assignNode3
     val consoleNode = ConsoleNode(letNodeA, null)
-    assignNode.nextNode = consoleNode
+    assignNode3.nextNode = consoleNode
+
+    val whileNode = WhileNode(OperationExprNode(VarExprNode(letNodeIdx), ConstExprNode(20), Operation.Less),
+        assignNode1,null)
+    letNodeIdx.nextNode = whileNode
 
     val finalNode = FinalNode()
-    consoleNode.nextNode = finalNode
+    whileNode.nextNode = finalNode
 
     val outputStream = File(outputFilename).outputStream()
 
