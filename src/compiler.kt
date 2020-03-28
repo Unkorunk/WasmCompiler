@@ -2,8 +2,9 @@ import tree.AssignNode
 import tree.ConsoleNode
 import tree.FinalNode
 import tree.LetNode
-import tree.expr.AddExprNode
+import tree.expr.OperationExprNode
 import tree.expr.ConstExprNode
+import tree.expr.Operation
 import tree.expr.VarExprNode
 import utility.Leb128
 import java.io.ByteArrayOutputStream
@@ -61,7 +62,7 @@ fun main(args: Array<String>) {
     val letNodeA = LetNode(ConstExprNode(123), null)
     val letNodeB = LetNode(ConstExprNode(256), null)
     letNodeA.nextNode = letNodeB
-    val assignNode = AssignNode(letNodeA, AddExprNode(VarExprNode(letNodeA), VarExprNode(letNodeB)), null)
+    val assignNode = AssignNode(letNodeA, OperationExprNode(VarExprNode(letNodeA), VarExprNode(letNodeB), Operation.Less), null)
     letNodeB.nextNode = assignNode
 
     val consoleNode = ConsoleNode(letNodeA, null)
