@@ -1,7 +1,9 @@
 import tree.ConsoleNode
-import tree.ExprNode
 import tree.FinalNode
 import tree.LetNode
+import tree.expr.AddExprNode
+import tree.expr.ConstExprNode
+import tree.expr.VarExprNode
 import utility.Leb128
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -55,12 +57,17 @@ fun main(args: Array<String>) {
 
     // TODO: analyze source text
 
-    val finalNode = FinalNode()
-    val consoleNode = ConsoleNode(null, finalNode)
-    val letNodeB = LetNode(ExprNode(256), consoleNode)
-    val letNodeA = LetNode(ExprNode(123), letNodeB)
+    val letNodeA = LetNode(ConstExprNode(123), null)
+    val letNodeB = LetNode(ConstExprNode(256), null)
+    letNodeA.nextNode = letNodeB
+    val letNodeC = LetNode(AddExprNode(VarExprNode(letNodeA), VarExprNode(letNodeB)), null)
+    letNodeB.nextNode = letNodeC
 
-    consoleNode.letNode = letNodeB
+    val consoleNode = ConsoleNode(letNodeC, null)
+    letNodeC.nextNode = consoleNode
+
+    val finalNode = FinalNode()
+    consoleNode.nextNode = finalNode
 
     val outputStream = File(outputFilename).outputStream()
 
