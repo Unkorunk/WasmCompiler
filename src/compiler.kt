@@ -1,3 +1,4 @@
+import tree.ConsoleNode
 import tree.ExprNode
 import tree.FinalNode
 import tree.LetNode
@@ -54,9 +55,12 @@ fun main(args: Array<String>) {
 
     // TODO: analyze source text
 
-    val startNode = LetNode(ExprNode(1),
-                    LetNode(ExprNode(1),
-                    FinalNode()))
+    val finalNode = FinalNode()
+    val consoleNode = ConsoleNode(null, finalNode)
+    val letNodeB = LetNode(ExprNode(256), consoleNode)
+    val letNodeA = LetNode(ExprNode(123), letNodeB)
+
+    consoleNode.letNode = letNodeB
 
     val outputStream = File(outputFilename).outputStream()
 
@@ -105,14 +109,14 @@ fun main(args: Array<String>) {
     exportSection.write(fieldStr1Bytes.size)
     exportSection.write(fieldStr1Bytes)
     exportSection.write(byteArrayOf(0x00)) // the kind of definition being exported = function
-    exportSection.write(Leb128.toUnsignedLeb128(1)) // function#entry#0
+    exportSection.write(Leb128.toUnsignedLeb128(1)) // function#entry#1
 
     // body#0
     val body0 = ByteArrayOutputStream()
     body0.write(Leb128.toUnsignedLeb128(1)) // number of local entries = 1
     body0.write(Leb128.toUnsignedLeb128(LetNode.getMaxIndex()))
-    body0.write(Leb128.toSignedLeb128(-0x02))
-    body0.write(startNode.getCode())
+    body0.write(Leb128.toSignedLeb128(-0x01))
+    body0.write(letNodeA.getCode())
 
     // Code section
     val codeSection = ByteArrayOutputStream()

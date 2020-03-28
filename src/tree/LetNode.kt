@@ -9,6 +9,10 @@ class LetNode(private val exprNode: ExprNode, nextNode: Node) : Node(nextNode) {
         return exprNode.generateCode().plus(byteArrayOf(0x21)).plus(Leb128.toUnsignedLeb128(variableIndex))
     }
 
+    public fun getIndex() : Int {
+        return variableIndex
+    }
+
     companion object {
         private var nextIdx = 0
         private fun getNewIndex() : Int {
