@@ -75,10 +75,20 @@ fun main(args: Array<String>) {
     var sourceText = sourceFile.readText()
 
     val operations = arrayOf("+", "-", "/", "*", "<", ">", "==", "!=")
-    val addSpaceAround = arrayOf("=", "(", ")", "{", "}", ";").plus(operations)
+    val addSpaceAround = arrayOf("(", ")", "{", "}", ";").plus(operations)
     for (entry in addSpaceAround) {
         sourceText = sourceText.replace(entry, " $entry ")
     }
+    var tempIdx = 1
+    while (tempIdx < sourceText.length - 1) {
+        if (sourceText[tempIdx] == '=' && sourceText[tempIdx - 1] != '!' && sourceText[tempIdx - 1] != '=' && sourceText[tempIdx + 1] != '=') {
+            sourceText = sourceText.replaceRange(tempIdx, tempIdx + 1, " = ")
+            tempIdx += 3
+        } else {
+            tempIdx++
+        }
+    }
+
     val tokensRaw = sourceText.split(Regex("\\s+"))
     val tokens = Array(tokensRaw.size) { i ->
         if (tokensRaw[i] in transformRawToken) transformRawToken[tokensRaw[i]] else null
