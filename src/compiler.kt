@@ -1,44 +1,95 @@
 import tree.*
-import tree.expr.OperationExprNode
-import tree.expr.ConstExprNode
-import tree.expr.Operation
-import tree.expr.VarExprNode
+import tree.expr.*
 import utility.Leb128
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.lang.Exception
+import java.util.*
+import kotlin.collections.ArrayDeque
 
 enum class Token {
-    Variable,
-    Equal,
-    Semicolon,
-    Name,
-    Number,
-
+    Variable,   // let                      <=> [var]
+    Assign,     // =                        <=> [assign]
+    Semicolon,  // ;                        <=> [sem]
+    Name,       // \a\w+                    <=> [name]
+    Expr,       // expression               <=> [expr]
+    RBOpen,     // round bracket open (     <=> [ropen]
+    RBClose,    // round bracket close )    <=> [rclose]
+    CBOpen,     // curly bracket open {     <=> [copen]
+    CBClose,    // curly bracket close }    <=> [cclose]
+    While,      // while                    <=> [while]
+    If,         // if                       <=> [if]
+    Else        // else                     <=> [else]
 }
 
-// let\s+           --> [var]
-// \s*=\s*          --> [eq]
-// ;                --> [sem]
+val transformRawToken = mapOf(
+    Pair("let", Token.Variable),
+    Pair("=", Token.Assign),
+    Pair(";", Token.Semicolon),
+    Pair("while", Token.While),
+    Pair("if", Token.If),
+    Pair("else", Token.Else),
+    Pair("{", Token.CBOpen),
+    Pair("}", Token.CBClose),
+    Pair("(", Token.RBOpen),
+    Pair(")", Token.RBClose)
+)
 
-// \][A-Za-z]\w*\[  --> [name]
-// \d+              --> [num]
+fun toReversePolishNotation(exprToken: List<Pair<Operation?, ExprNode?>>) : ExprNode {
+    val exprStack = Stack<ExprNode>()
+    val operationStack = Stack<Operation>()
 
-// [var][name][eq].*[sem] --> check variable in declaration map
+    for (token in exprToken) {
+        if (token.first == null && token.second != null) {
+            exprStack.push(token.second!!)
+        } else if (token.first != null && token.second == null) {
+            while (!operationStack.empty() && operationStack.peek().priority >= token.first!!.priority) {
+                val secondExpr = exprStack.pop()
+                val firstExpr = exprStack.pop()
+                exprStack.push(OperationExprNode(firstExpr, secondExpr, operationStack.pop()))
+            }
+            operationStack.push(token.first)
+        } else {
+            throw Exception("operation and ExprNode either equal null or not null")
+        }
+    }
+
+    while (!operationStack.empty()) {
+        val secondExpr = exprStack.pop()
+        val firstExpr = exprStack.pop()
+        exprStack.push(OperationExprNode(firstExpr, secondExpr, operationStack.pop()))
+    }
+
+    if (exprStack.size != 1) {
+        throw Exception("Error")
+    }
+
+    return exprStack.pop()
+}
+
+// Variable declaration
+// [var][name][assign][expr][sem] --> check [name] in declaration map (in tree)
 //                                         |
 //           if variable already declared / \ else
-//       [error] re-declaring variable <-/   \-> generate variable declaration
-//                                                           |
-//                                              add variable to declaration map
-//                                                           |
-//                                           convert .* to Reverse Polish notation
-//                                                           |
-//                                        generate code using Reverse Polish notation
-//                                                           |
-//                                                         [code]
+//       [error] re-declaring variable <-/   \-> convert [expr] to Reverse Polish notation +
+//                                                            |
+//                                                    generate ExprNode +
+//                                                            |
+//                                                    generate LetNode
+//                                                            |
+//                                                add variable to declaration map
 
-
-// [name][eq][expr][sem] -> check variable in declaration map --> generate assignment expression
-//                                                             \-> [error] variable not declared
+// Assign
+// [name][eq][expr][sem] -> check [name] in declaration map (in tree)
+//                                           |
+//                                  get LetNode <=> [name]
+//                                           |
+//             if variable already declared / \ else
+// [error] use of uninitialized variable <-/   \-> convert [expr] to Reverse Polish notation
+//                                                                  |
+//                                                           generate ExprNode
+//                                                                  |
+//                                                           generate AssignNode
 
 
 fun main(args: Array<String>) {
@@ -54,28 +105,58 @@ fun main(args: Array<String>) {
     val outputFilename = sourceFile.nameWithoutExtension + ".wasm"
     var sourceText = sourceFile.readText()
 
+    val addSpaceAround = arrayOf("+", "-", "/", "*", "<", ">", "==", "!=", "=", "(", ")", "{", "}", ";")
+    for (entry in addSpaceAround) {
+        sourceText = sourceText.replace(entry, " $entry ")
+    }
+    val tokensRaw = sourceText.split(Regex("\\s+"))
+    File("debug").writeText(tokensRaw.joinToString(" "))
+
     // TODO: analyze source text
 
-    val letNodeA = LetNode(ConstExprNode(1), null)
-    val letNodeB = LetNode(ConstExprNode(1), null)
-    letNodeA.nextNode = letNodeB
-    val letNodeIdx = LetNode(ConstExprNode(0), null);
-    letNodeB.nextNode = letNodeIdx
+//    val letNodeA = LetNode(ConstExprNode(1))
+//
+//    val letNodeB = LetNode(ConstExprNode(1))
+//    letNodeA.nextNode = letNodeB
+//
+//    val letNodeIdx = LetNode(ConstExprNode(0));
+//    letNodeB.nextNode = letNodeIdx
+//
+//    val assignNode1 = AssignNode(letNodeA, OperationExprNode(VarExprNode(letNodeA), VarExprNode(letNodeB), Operation.Add))
+//
+//    val assignNode2 = AssignNode(letNodeB, OperationExprNode(VarExprNode(letNodeA), VarExprNode(letNodeB), Operation.Sub))
+//    assignNode1.nextNode = assignNode2
+//
+//    val assignNode3 = AssignNode(letNodeIdx, OperationExprNode(VarExprNode(letNodeIdx), ConstExprNode(1), Operation.Add))
+//    assignNode2.nextNode = assignNode3
+//
+//    val consoleNode = ConsoleNode(letNodeA)
+//    assignNode3.nextNode = consoleNode
+//
+//    val whileNode = WhileNode(OperationExprNode(VarExprNode(letNodeIdx), ConstExprNode(20), Operation.Less), assignNode1)
+//    letNodeIdx.nextNode = whileNode
+//
 
-    val assignNode1 = AssignNode(letNodeA, OperationExprNode(VarExprNode(letNodeA), VarExprNode(letNodeB), Operation.Add), null)
-    val assignNode2 = AssignNode(letNodeB, OperationExprNode(VarExprNode(letNodeA), VarExprNode(letNodeB), Operation.Sub), null)
-    assignNode1.nextNode = assignNode2
-    val assignNode3 = AssignNode(letNodeIdx, OperationExprNode(VarExprNode(letNodeIdx), ConstExprNode(1), Operation.Add), null)
-    assignNode2.nextNode = assignNode3
-    val consoleNode = ConsoleNode(letNodeA, null)
-    assignNode3.nextNode = consoleNode
 
-    val whileNode = WhileNode(OperationExprNode(VarExprNode(letNodeIdx), ConstExprNode(20), Operation.Less),
-        assignNode1,null)
-    letNodeIdx.nextNode = whileNode
+    val letNodeX = LetNode(ConstExprNode(3))
+//    whileNode.nextNode = letNodeX
+    val varExprX = VarExprNode(letNodeX)
+    val assignNodeX = AssignNode(letNodeX,
+        toReversePolishNotation(
+            listOf(Pair(null, varExprX), Pair(Operation.Mul, null), Pair(null, varExprX), Pair(Operation.Add, null),
+                   Pair(null, ConstExprNode(2)), Pair(Operation.Mul, null), Pair(null, varExprX), Pair(Operation.Add, null),
+                Pair(null, ConstExprNode(1))
+            )
+        )
+    )
+    letNodeX.nextNode = assignNodeX
+
+    val consoleNodeX = ConsoleNode(letNodeX)
+    assignNodeX.nextNode = consoleNodeX
+
 
     val finalNode = FinalNode()
-    whileNode.nextNode = finalNode
+    consoleNodeX.nextNode = finalNode
 
     val outputStream = File(outputFilename).outputStream()
 
@@ -131,7 +212,7 @@ fun main(args: Array<String>) {
     body0.write(Leb128.toUnsignedLeb128(1)) // number of local entries = 1
     body0.write(Leb128.toUnsignedLeb128(LetNode.getMaxIndex()))
     body0.write(Leb128.toSignedLeb128(-0x01))
-    body0.write(letNodeA.getCode())
+    body0.write(letNodeX.getCode())
 
     // Code section
     val codeSection = ByteArrayOutputStream()

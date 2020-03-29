@@ -3,7 +3,7 @@ package tree
 import tree.expr.ExprNode
 import utility.Leb128
 
-class LetNode(private val exprNode: ExprNode, nextNode: Node?) : Node(nextNode) {
+class LetNode(private val exprNode: ExprNode) : Node() {
     private val variableIndex = getNewIndex()
 
     public override fun generateCode(): ByteArray {
