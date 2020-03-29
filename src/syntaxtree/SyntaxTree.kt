@@ -21,6 +21,10 @@ class SyntaxTree {
     private val levelStack = Stack<LevelData>()
     private var levelData = LevelData()
 
+    fun getDeclarationsAtLevel() : Array<String> {
+        return levelData.declarationMap.keys.toTypedArray()
+    }
+
     fun searchDeclaration(name: String) : LetNode? {
         if (name in levelData.declarationMap) {
             return levelData.declarationMap[name]

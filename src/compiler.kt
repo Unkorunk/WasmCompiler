@@ -167,6 +167,10 @@ fun main(args: Array<String>) {
         }
     }
 
+    for (name in syntaxTree.getDeclarationsAtLevel()) {
+        syntaxTree.console(name)
+    }
+
     val outputStream = File(outputFilename).outputStream()
 
     outputStream.write(byteArrayOf(0x00, 0x61, 0x73, 0x6d)) // magic number i.e., \0asm
