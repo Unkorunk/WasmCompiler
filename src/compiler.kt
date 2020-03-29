@@ -114,32 +114,30 @@ fun main(args: Array<String>) {
 
     // TODO: analyze source text
 
-//    val letNodeA = LetNode(ConstExprNode(1))
-//
-//    val letNodeB = LetNode(ConstExprNode(1))
-//    letNodeA.nextNode = letNodeB
-//
-//    val letNodeIdx = LetNode(ConstExprNode(0));
-//    letNodeB.nextNode = letNodeIdx
-//
-//    val assignNode1 = AssignNode(letNodeA, OperationExprNode(VarExprNode(letNodeA), VarExprNode(letNodeB), Operation.Add))
-//
-//    val assignNode2 = AssignNode(letNodeB, OperationExprNode(VarExprNode(letNodeA), VarExprNode(letNodeB), Operation.Sub))
-//    assignNode1.nextNode = assignNode2
-//
-//    val assignNode3 = AssignNode(letNodeIdx, OperationExprNode(VarExprNode(letNodeIdx), ConstExprNode(1), Operation.Add))
-//    assignNode2.nextNode = assignNode3
-//
-//    val consoleNode = ConsoleNode(letNodeA)
-//    assignNode3.nextNode = consoleNode
-//
-//    val whileNode = WhileNode(OperationExprNode(VarExprNode(letNodeIdx), ConstExprNode(20), Operation.Less), assignNode1)
-//    letNodeIdx.nextNode = whileNode
-//
+    val letNodeA = LetNode(ConstExprNode(1))
 
+    val letNodeB = LetNode(ConstExprNode(1))
+    letNodeA.nextNode = letNodeB
+
+    val letNodeIdx = LetNode(ConstExprNode(0));
+    letNodeB.nextNode = letNodeIdx
+
+    val assignNode1 = AssignNode(letNodeA, OperationExprNode(VarExprNode(letNodeA), VarExprNode(letNodeB), Operation.Add))
+
+    val assignNode2 = AssignNode(letNodeB, OperationExprNode(VarExprNode(letNodeA), VarExprNode(letNodeB), Operation.Sub))
+    assignNode1.nextNode = assignNode2
+
+    val assignNode3 = AssignNode(letNodeIdx, OperationExprNode(VarExprNode(letNodeIdx), ConstExprNode(1), Operation.Add))
+    assignNode2.nextNode = assignNode3
+
+    val consoleNode = ConsoleNode(letNodeA)
+    assignNode3.nextNode = consoleNode
+
+    val whileNode = WhileNode(OperationExprNode(VarExprNode(letNodeIdx), ConstExprNode(5), Operation.Less), assignNode1)
+    letNodeIdx.nextNode = whileNode
 
     val letNodeX = LetNode(ConstExprNode(3))
-//    whileNode.nextNode = letNodeX
+    whileNode.nextNode = letNodeX
     val varExprX = VarExprNode(letNodeX)
     val assignNodeX = AssignNode(letNodeX,
         toReversePolishNotation(
@@ -153,7 +151,6 @@ fun main(args: Array<String>) {
 
     val consoleNodeX = ConsoleNode(letNodeX)
     assignNodeX.nextNode = consoleNodeX
-
 
     val finalNode = FinalNode()
     consoleNodeX.nextNode = finalNode
@@ -212,7 +209,7 @@ fun main(args: Array<String>) {
     body0.write(Leb128.toUnsignedLeb128(1)) // number of local entries = 1
     body0.write(Leb128.toUnsignedLeb128(LetNode.getMaxIndex()))
     body0.write(Leb128.toSignedLeb128(-0x01))
-    body0.write(letNodeX.getCode())
+    body0.write(letNodeA.getCode())
 
     // Code section
     val codeSection = ByteArrayOutputStream()
