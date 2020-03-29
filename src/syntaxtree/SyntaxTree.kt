@@ -9,14 +9,14 @@ class SyntaxTree {
     data class LevelData(
         val declarationMap: MutableMap<String, LetNode> = mutableMapOf(),
         var startNode: Node? = null,
-        var parentNode: Node? = null
+        var parentNode: Node? = null,
+        var itsElseCondition: Boolean = false
     )
 
     private enum class DataFlowType {
         Condition,
         Loop
     }
-
     private val exprStack = Stack<Pair<DataFlowType, ExprNode>>()
     private val levelStack = Stack<LevelData>()
     private var levelData = LevelData()
@@ -40,7 +40,7 @@ class SyntaxTree {
     private fun getNewIndex() : Int {
         return nextIdx++
     }
-    public fun getMaxIndex() : Int {
+    fun getMaxIndex() : Int {
         return nextIdx + 1
     }
 
@@ -76,20 +76,23 @@ class SyntaxTree {
         addNode(assignNode)
     }
 
-    fun loop(expr: Array<String>) {
+    fun whileLoop(expr: Array<String>) {
         levelStack.push(levelData)
         levelData = LevelData()
         exprStack.push(Pair(DataFlowType.Loop, ConvertToExprNode.getExprNode(this, expr)))
     }
 
-    fun condition(expr: Array<String>) {
+    fun ifCondition(expr: Array<String>) {
         levelStack.push(levelData)
         levelData = LevelData()
         exprStack.push(Pair(DataFlowType.Condition, ConvertToExprNode.getExprNode(this, expr)))
     }
 
     fun elseCondition() {
-        // TODO: implement
+        levelStack.push(levelData)
+        levelData = LevelData()
+
+        levelData.itsElseCondition = true
     }
 
     fun end() {
@@ -97,7 +100,20 @@ class SyntaxTree {
         if (levelData.parentNode!!.nextNode is FinalNode) {
             levelData.parentNode!!.nextNode = null
         }
-        val thenNode = levelData.startNode
+        val thenNode = when(expr.first) {
+            DataFlowType.Loop -> levelData.startNode
+            DataFlowType.Condition -> if (levelData.itsElseCondition) {
+                levelStack.pop().startNode
+            } else {
+                levelData.startNode
+            }
+        }
+        val elseNode = if (expr.first == DataFlowType.Condition && levelData.itsElseCondition) {
+            levelData.startNode
+        } else {
+            null
+        }
+
         levelData = levelStack.pop() // return prev LevelData
 
         if (thenNode == null) {
@@ -105,7 +121,7 @@ class SyntaxTree {
         }
 
         val flowNode : Node = if (expr.first == DataFlowType.Condition) {
-            IfNode(expr.second, thenNode, null)
+            IfNode(expr.second, thenNode, elseNode)
         } else if (expr.first == DataFlowType.Loop) {
             WhileNode(expr.second, thenNode)
         } else {
@@ -128,8 +144,10 @@ class SyntaxTree {
             throw Exception("not balance curly brackets sequence")
         }
 
-        addNode(FinalNode())
-        if (levelData.startNode == null) {
+        if (levelData.parentNode !is FinalNode) {
+            addNode(FinalNode())
+        }
+        if (levelData.startNode == null || levelData.parentNode !is FinalNode) {
             throw Exception("BUG")
         }
 

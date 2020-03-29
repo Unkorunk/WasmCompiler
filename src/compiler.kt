@@ -1,17 +1,14 @@
 import syntaxtree.*
-import syntaxtree.expr.*
 import utility.Leb128
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.lang.Exception
-import java.util.*
 
 enum class Token {
     Variable,   // let                      <=> [var]
     Assign,     // =                        <=> [assign]
     Semicolon,  // ;                        <=> [sem]
-    Name,       // \a\w+                    <=> [name]
-    Expr,       // expression               <=> [expr]
+    // \a\w+[assign]                        <=> [name][assign]
+    // [assign].*[sem]                      <=> [assign][expr][sem]
     RBOpen,     // round bracket open (     <=> [ropen]
     RBClose,    // round bracket close )    <=> [rclose]
     CBOpen,     // curly bracket open {     <=> [copen]
@@ -34,31 +31,18 @@ val transformRawToken = mapOf(
     Pair(")", Token.RBClose)
 )
 
-
 // Variable declaration
-// [var][name][assign][expr][sem] --> check [name] in declaration map (in tree)
-//                                         |
-//           if variable already declared / \ else
-//       [error] re-declaring variable <-/   \-> convert [expr] to Reverse Polish notation +
-//                                                            |
-//                                                    generate ExprNode +
-//                                                            |
-//                                                    generate LetNode
-//                                                            |
-//                                                add variable to declaration map
-
+// [var][name][assign][expr][sem] -> syntaxTree.let([name], [expr])
 // Assign
-// [name][eq][expr][sem] -> check [name] in declaration map (in tree)
-//                                           |
-//                                  get LetNode <=> [name]
-//                                           |
-//             if variable already declared / \ else
-// [error] use of uninitialized variable <-/   \-> convert [expr] to Reverse Polish notation
-//                                                                  |
-//                                                           generate ExprNode
-//                                                                  |
-//                                                           generate AssignNode
-
+// [name][assign][expr][sem] -> syntaxTree.assign([name], [expr])
+// If
+// [if][ropen][expr][rclose][copen] -> syntaxTree.ifCondition([expr])
+// Else
+// [else][copen] -> syntaxTree.elseCondition()
+// While
+// [while][ropen][expr][rclose][copen] -> syntaxTree.whileLoop([expr])
+// End data flow block <=> '}'
+// [cclose] -> syntaxTree.end()
 
 fun main(args: Array<String>) {
     val sourceFilename = args.first()
@@ -87,15 +71,25 @@ fun main(args: Array<String>) {
     // TODO: analyze source text
 
     val syntaxTree = SyntaxTree()
-    syntaxTree.let("a", arrayOf("1"))
-    syntaxTree.let("b", arrayOf("1"))
+    syntaxTree.let("a", arrayOf("123"))
+    syntaxTree.let("b", arrayOf("12"))
+    syntaxTree.ifCondition(arrayOf("a", "<", "b"))
+    syntaxTree.console("b")
+    syntaxTree.elseCondition()
+    syntaxTree.assign("a", arrayOf("1"))
+    syntaxTree.assign("b", arrayOf("1"))
     syntaxTree.let("i", arrayOf("0"))
-    syntaxTree.loop(arrayOf("i", "<", "5"))
+    syntaxTree.whileLoop(arrayOf("i", "<", "5"))
     syntaxTree.assign("a", arrayOf("a", "+", "b"))
     syntaxTree.assign("b", arrayOf("a", "-", "b"))
     syntaxTree.assign("i", arrayOf("i", "+", "1"))
     syntaxTree.console("a")
     syntaxTree.end()
+    syntaxTree.assign("a", arrayOf("-34"))
+    syntaxTree.end()
+    syntaxTree.assign("b", arrayOf("123456789"))
+    syntaxTree.console("b")
+    syntaxTree.console("a")
 
     val outputStream = File(outputFilename).outputStream()
 
