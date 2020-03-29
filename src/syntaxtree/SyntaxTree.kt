@@ -96,6 +96,10 @@ class SyntaxTree {
     }
 
     fun end() {
+        if (exprStack.empty()) {
+            throw Exception("not balance curly brackets sequence")
+        }
+
         val expr = exprStack.pop()
         if (levelData.parentNode!!.nextNode is FinalNode) {
             levelData.parentNode!!.nextNode = null
