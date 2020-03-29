@@ -1,6 +1,6 @@
-package tree.expr
+package syntaxtree.expr
 
-import tree.LetNode
+import syntaxtree.LetNode
 
 class VarExprNode constructor(private val letNode: LetNode) : ExprNode() {
     override fun generateCode(): ByteArray {

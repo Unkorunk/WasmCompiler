@@ -1,4 +1,4 @@
-package tree
+package syntaxtree
 
 class FinalNode : Node() {
     public override fun generateCode(): ByteArray {

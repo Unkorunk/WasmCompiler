@@ -1,11 +1,10 @@
-import tree.*
-import tree.expr.*
+import syntaxtree.*
+import syntaxtree.expr.*
 import utility.Leb128
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.lang.Exception
 import java.util.*
-import kotlin.collections.ArrayDeque
 
 enum class Token {
     Variable,   // let                      <=> [var]
@@ -35,37 +34,6 @@ val transformRawToken = mapOf(
     Pair(")", Token.RBClose)
 )
 
-fun toReversePolishNotation(exprToken: List<Pair<Operation?, ExprNode?>>) : ExprNode {
-    val exprStack = Stack<ExprNode>()
-    val operationStack = Stack<Operation>()
-
-    for (token in exprToken) {
-        if (token.first == null && token.second != null) {
-            exprStack.push(token.second!!)
-        } else if (token.first != null && token.second == null) {
-            while (!operationStack.empty() && operationStack.peek().priority >= token.first!!.priority) {
-                val secondExpr = exprStack.pop()
-                val firstExpr = exprStack.pop()
-                exprStack.push(OperationExprNode(firstExpr, secondExpr, operationStack.pop()))
-            }
-            operationStack.push(token.first)
-        } else {
-            throw Exception("operation and ExprNode either equal null or not null")
-        }
-    }
-
-    while (!operationStack.empty()) {
-        val secondExpr = exprStack.pop()
-        val firstExpr = exprStack.pop()
-        exprStack.push(OperationExprNode(firstExpr, secondExpr, operationStack.pop()))
-    }
-
-    if (exprStack.size != 1) {
-        throw Exception("Error")
-    }
-
-    return exprStack.pop()
-}
 
 // Variable declaration
 // [var][name][assign][expr][sem] --> check [name] in declaration map (in tree)
@@ -110,50 +78,24 @@ fun main(args: Array<String>) {
         sourceText = sourceText.replace(entry, " $entry ")
     }
     val tokensRaw = sourceText.split(Regex("\\s+"))
+    val tokens = Array(tokensRaw.size) { i ->
+        if (tokensRaw[i] in transformRawToken) transformRawToken[tokensRaw[i]] else null
+    }
+
     File("debug").writeText(tokensRaw.joinToString(" "))
 
     // TODO: analyze source text
 
-    val letNodeA = LetNode(ConstExprNode(1))
-
-    val letNodeB = LetNode(ConstExprNode(1))
-    letNodeA.nextNode = letNodeB
-
-    val letNodeIdx = LetNode(ConstExprNode(0));
-    letNodeB.nextNode = letNodeIdx
-
-    val assignNode1 = AssignNode(letNodeA, OperationExprNode(VarExprNode(letNodeA), VarExprNode(letNodeB), Operation.Add))
-
-    val assignNode2 = AssignNode(letNodeB, OperationExprNode(VarExprNode(letNodeA), VarExprNode(letNodeB), Operation.Sub))
-    assignNode1.nextNode = assignNode2
-
-    val assignNode3 = AssignNode(letNodeIdx, OperationExprNode(VarExprNode(letNodeIdx), ConstExprNode(1), Operation.Add))
-    assignNode2.nextNode = assignNode3
-
-    val consoleNode = ConsoleNode(letNodeA)
-    assignNode3.nextNode = consoleNode
-
-    val whileNode = WhileNode(OperationExprNode(VarExprNode(letNodeIdx), ConstExprNode(5), Operation.Less), assignNode1)
-    letNodeIdx.nextNode = whileNode
-
-    val letNodeX = LetNode(ConstExprNode(3))
-    whileNode.nextNode = letNodeX
-    val varExprX = VarExprNode(letNodeX)
-    val assignNodeX = AssignNode(letNodeX,
-        toReversePolishNotation(
-            listOf(Pair(null, varExprX), Pair(Operation.Mul, null), Pair(null, varExprX), Pair(Operation.Add, null),
-                   Pair(null, ConstExprNode(2)), Pair(Operation.Mul, null), Pair(null, varExprX), Pair(Operation.Add, null),
-                Pair(null, ConstExprNode(1))
-            )
-        )
-    )
-    letNodeX.nextNode = assignNodeX
-
-    val consoleNodeX = ConsoleNode(letNodeX)
-    assignNodeX.nextNode = consoleNodeX
-
-    val finalNode = FinalNode()
-    consoleNodeX.nextNode = finalNode
+    val syntaxTree = SyntaxTree()
+    syntaxTree.let("a", arrayOf("1"))
+    syntaxTree.let("b", arrayOf("1"))
+    syntaxTree.let("i", arrayOf("0"))
+    syntaxTree.loop(arrayOf("i", "<", "5"))
+    syntaxTree.assign("a", arrayOf("a", "+", "b"))
+    syntaxTree.assign("b", arrayOf("a", "-", "b"))
+    syntaxTree.assign("i", arrayOf("i", "+", "1"))
+    syntaxTree.console("a")
+    syntaxTree.end()
 
     val outputStream = File(outputFilename).outputStream()
 
@@ -207,9 +149,9 @@ fun main(args: Array<String>) {
     // body#0
     val body0 = ByteArrayOutputStream()
     body0.write(Leb128.toUnsignedLeb128(1)) // number of local entries = 1
-    body0.write(Leb128.toUnsignedLeb128(LetNode.getMaxIndex()))
+    body0.write(Leb128.toUnsignedLeb128(syntaxTree.getMaxIndex()))
     body0.write(Leb128.toSignedLeb128(-0x01))
-    body0.write(letNodeA.getCode())
+    body0.write(syntaxTree.compile())
 
     // Code section
     val codeSection = ByteArrayOutputStream()

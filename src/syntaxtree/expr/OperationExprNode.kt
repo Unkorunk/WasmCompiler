@@ -1,4 +1,4 @@
-package tree.expr
+package syntaxtree.expr
 
 class OperationExprNode(private val lhs: ExprNode, private val rhs: ExprNode, private val operation: Operation) : ExprNode() {
 

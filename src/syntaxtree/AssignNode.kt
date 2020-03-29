@@ -1,6 +1,6 @@
-package tree
+package syntaxtree
 
-import tree.expr.ExprNode
+import syntaxtree.expr.ExprNode
 
 class AssignNode(private val letNode: LetNode, private val exprNode: ExprNode) : Node() {
     override fun generateCode(): ByteArray {

@@ -1,4 +1,4 @@
-package tree
+package syntaxtree
 
 abstract class Node constructor(var nextNode : Node?) {
     constructor() : this(null)

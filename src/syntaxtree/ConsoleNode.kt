@@ -1,4 +1,4 @@
-package tree
+package syntaxtree
 
 import utility.Leb128
 

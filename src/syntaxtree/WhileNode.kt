@@ -1,6 +1,6 @@
-package tree
+package syntaxtree
 
-import tree.expr.ExprNode
+import syntaxtree.expr.ExprNode
 import utility.Leb128
 
 class WhileNode(private val condition: ExprNode, private val thenNode: Node) : Node() {
