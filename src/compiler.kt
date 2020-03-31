@@ -1,3 +1,4 @@
+import generator.Generator
 import syntaxtree.*
 import utility.Leb128
 import java.io.ByteArrayOutputStream
@@ -45,23 +46,12 @@ val transformRawToken = mapOf(
 // End data flow block <=> '}'
 // [cclose] -> syntaxTree.end()
 
-// ===========================S=T=A=T=E==M=A=C=H=I=N=E===========================
-// 0       1        2         3         4 <let(\a\w+, string[])> 0
-// * --> [var] -> \a\w+ -> [assign] -> string[] -------------> [sem]
-//   |    5         6        7       8 <ifCondition(string[])> 0
-//   \-> [if] -> [ropen] -> string[] -> [rclose] ---------> [copen]
-//   |    9          10         11 <assign(\a\w+, string[])>  0
-//   \-> \a\w+ -> [assign] -> string[] -------------------> [sem]
-//   |     12 < elseCondition() > 13
-//   \-> [else] -------------> [copen]
-//   |      13        14          15          16 < whileLoop(string[]) > 0
-//   \-> [while] -> [ropen] -> string[] -> [rclose] -----------------> [copen]
-//   |   < end() > 0
-//   \--------> [cclose]
-//                (4 7 11 15)
-// (4 7 11 15) --> string[]
-
 fun main(args: Array<String>) {
+    if (args.isEmpty()) {
+        println("no input file")
+        return
+    }
+
     val sourceFilename = args.first()
     println("Input file: $sourceFilename")
 
@@ -171,91 +161,13 @@ fun main(args: Array<String>) {
         syntaxTree.console(name)
     }
 
-    val outputStream = File(outputFilename).outputStream()
+    val generator = Generator()
+    val typeImportedFunc = generator.addType(1, 0)
+    val typeExportedFunc = generator.addType(0, 0)
+    generator.addImport("imports", "imported_func", typeImportedFunc)
+    val exportedFunc = generator.addFunc(typeExportedFunc, syntaxTree)
+    generator.addExport("exported_func", exportedFunc)
 
-    outputStream.write(byteArrayOf(0x00, 0x61, 0x73, 0x6d)) // magic number i.e., \0asm
-    outputStream.write(byteArrayOf(0x01, 0x00, 0x00, 0x00)) // version number, 0x1
-
-    // Type section
-    val typeSection = ByteArrayOutputStream()
-    typeSection.write(Leb128.toUnsignedLeb128(2)) // count of type entries to follow
-    // type#entry#0 (i32) -> void
-    typeSection.write(Leb128.toSignedLeb128(-0x20)) // func
-    typeSection.write(Leb128.toUnsignedLeb128(1)) // param_count = 1
-    typeSection.write(Leb128.toSignedLeb128(-0x01)) // param_types = { i32 }
-    typeSection.write(Leb128.toUnsignedLeb128(0)) // return_count = 0
-    // type#entry#1 () -> void
-    typeSection.write(Leb128.toSignedLeb128(-0x20)) // func
-    typeSection.write(Leb128.toUnsignedLeb128(0)) // param_count = 0
-    typeSection.write(Leb128.toUnsignedLeb128(0)) // return_count = 0
-
-    // Import section
-    val importSection = ByteArrayOutputStream()
-    importSection.write(Leb128.toUnsignedLeb128(1)) // count of import entries to follow
-    // import#entry#0
-    val moduleStr = "imports"
-    val moduleStrBytes = moduleStr.encodeToByteArray()
-    importSection.write(moduleStrBytes.size)
-    importSection.write(moduleStrBytes)
-    val fieldStr = "imported_func"
-    val fieldStrBytes = fieldStr.encodeToByteArray()
-    importSection.write(fieldStrBytes.size)
-    importSection.write(fieldStrBytes)
-    importSection.write(byteArrayOf(0x00)) // import function
-    importSection.write(byteArrayOf(0)) // type index of the function signature = type#entry#0
-
-    // Function section
-    val functionSection = ByteArrayOutputStream()
-    functionSection.write(Leb128.toUnsignedLeb128(1))
-    functionSection.write(Leb128.toUnsignedLeb128(1)) // type#entry#1
-
-    // Export section
-    val exportSection = ByteArrayOutputStream()
-    exportSection.write(Leb128.toUnsignedLeb128(1)) // count of export entries to follow
-    // export#entry#0
-    val fieldStr1 = "exported_func"
-    val fieldStr1Bytes = fieldStr1.encodeToByteArray()
-    exportSection.write(fieldStr1Bytes.size)
-    exportSection.write(fieldStr1Bytes)
-    exportSection.write(byteArrayOf(0x00)) // the kind of definition being exported = function
-    exportSection.write(Leb128.toUnsignedLeb128(1)) // function#entry#1
-
-    // body#0
-    val body0 = ByteArrayOutputStream()
-    body0.write(Leb128.toUnsignedLeb128(1)) // number of local entries = 1
-    body0.write(Leb128.toUnsignedLeb128(syntaxTree.getMaxIndex()))
-    body0.write(Leb128.toSignedLeb128(-0x01))
-    body0.write(syntaxTree.compile())
-
-    // Code section
-    val codeSection = ByteArrayOutputStream()
-    codeSection.write(Leb128.toUnsignedLeb128(1))
-    // body#0
-    codeSection.write(Leb128.toUnsignedLeb128(body0.size()))
-    codeSection.write(body0.toByteArray())
-
-    outputStream.write(Leb128.toUnsignedLeb128(1)) // section code = Type
-    outputStream.write(Leb128.toUnsignedLeb128(typeSection.size()))
-    outputStream.write(typeSection.toByteArray())
-
-    outputStream.write(Leb128.toUnsignedLeb128(2)) // section code = Import
-    outputStream.write(Leb128.toUnsignedLeb128(importSection.size()))
-    outputStream.write(importSection.toByteArray())
-
-    outputStream.write(Leb128.toUnsignedLeb128(3)) // section code = Function
-    outputStream.write(Leb128.toUnsignedLeb128(functionSection.size()))
-    outputStream.write(functionSection.toByteArray())
-
-    outputStream.write(Leb128.toUnsignedLeb128(7)) // section code = Export
-    outputStream.write(Leb128.toUnsignedLeb128(exportSection.size()))
-    outputStream.write(exportSection.toByteArray())
-
-    outputStream.write(Leb128.toUnsignedLeb128(10)) // section code = Code
-    outputStream.write(Leb128.toUnsignedLeb128(codeSection.size()))
-    outputStream.write(codeSection.toByteArray())
-
-    outputStream.close()
-
+    File(outputFilename).writeBytes(generator.compile())
     println("Output file: $outputFilename")
-
 }
