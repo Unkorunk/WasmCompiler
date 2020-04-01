@@ -17,10 +17,13 @@ class Parser {
 
     private var tokenOld : Tokenizer.TokenData? = null
     private var tokenNow : Tokenizer.TokenData? = null
+    private var tokenProcessed = false
     private fun nextToken() : Boolean {
+        tokenProcessed = true
         if (tokenIdx < tokens.size) {
             tokenOld = tokenNow
             tokenNow = tokens[tokenIdx++]
+            tokenProcessed = false
             return true
         }
         return false
@@ -28,7 +31,8 @@ class Parser {
 
     private fun accept(token: Tokenizer.Token) : Boolean {
         if (tokenNow != null && tokenNow!!.token == token) {
-            return nextToken()
+            nextToken()
+            return true
         }
         return false
     }
@@ -37,8 +41,7 @@ class Parser {
         if (accept(token)) {
             return true
         }
-        println("unexpected symbol")
-        return false
+        throw Exception("unexpected symbol")
     }
 
     private fun assign() {
@@ -120,6 +123,10 @@ class Parser {
 
         nextToken()
         body()
+
+        if (tokenIdx < tokens.size || !tokenProcessed) {
+            throw Exception("unexpected symbol")
+        }
 
         return syntaxTree
     }

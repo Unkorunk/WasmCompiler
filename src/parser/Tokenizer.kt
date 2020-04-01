@@ -53,7 +53,7 @@ class Tokenizer {
         }
 
         fun tokenize(sourceText: String): Array<TokenData> {
-            val text = preparationStage(sourceText)
+            val text = preparationStage(sourceText).trim()
             val tokensRaw = text.split(Regex("\\s+"))
             return Array(tokensRaw.size) { i ->
                 val token = transformRawToken.getOrDefault(tokensRaw[i], Token.Data)

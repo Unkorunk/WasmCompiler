@@ -105,9 +105,9 @@ class SyntaxTree {
         }
 
         val expr = exprStack.pop()
-        if (levelData.parentNode!!.nextNode is FinalNode) {
-            levelData.parentNode!!.nextNode = null
-        }
+//        if (levelData.parentNode!!.nextNode is FinalNode) {
+//            levelData.parentNode!!.nextNode = null
+//        }
         val thenNode = when(expr.first) {
             DataFlowType.Loop -> levelData.startNode
             DataFlowType.Condition -> if (levelData.itsElseCondition) {
@@ -125,7 +125,7 @@ class SyntaxTree {
         levelData = levelStack.pop() // return prev LevelData
 
         if (thenNode == null) {
-            throw Exception("invalid data flow structure")
+            throw Exception("empty ${if (expr.first == DataFlowType.Loop) "loop" else "condition"} body")
         }
 
         val flowNode : Node = if (expr.first == DataFlowType.Condition) {
@@ -139,6 +139,7 @@ class SyntaxTree {
         addNode(flowNode)
     }
 
+    // TODO: delete that. it's for debug
     fun console(name: String) {
         val declaration = searchDeclaration(name) ?: throw Exception("use of uninitialized variable")
 
